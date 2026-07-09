@@ -1,0 +1,2451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Bines por Correlativo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --ink:#1F2A1A;
+    --ink-soft:#3A4A32;
+    --parchment:#F3EFE1;
+    --parchment-line:#DCD4BC;
+    --crate:#C98A2B;
+    --crate-deep:#9C6A1E;
+    --leaf:#4C6B3F;
+    --leaf-deep:#334A29;
+    --alert:#B23A2E;
+    --white:#FFFDF8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ink);
+    background-image:
+      radial-gradient(circle at 10% 0%, #2B3A24 0%, var(--ink) 55%);
+    font-family:'IBM Plex Sans', sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    padding:14px;
+  }
+  .sheet{
+    max-width:1400px;
+    margin:0 auto;
+    background:var(--parchment);
+    border-radius:14px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.45);
+    overflow:hidden;
+  }
+  header{
+    background:linear-gradient(135deg, var(--leaf-deep), var(--ink));
+    padding:20px 22px 18px;
+    color:var(--white);
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--crate);
+    margin:0 0 6px;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:clamp(20px,4vw,28px);
+    margin:0 0 4px;
+    font-weight:700;
+  }
+  .sub{
+    font-size:13px;
+    color:#CBD6C2;
+    margin:0;
+  }
+  .fecha-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:14px;
+    flex-wrap:wrap;
+  }
+  .fecha-row label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.08em;
+    color:var(--crate);
+    text-transform:uppercase;
+  }
+  .fecha-row input[type="date"]{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    padding:6px 10px;
+    border-radius:8px;
+    border:1px solid #556B48;
+    background:#233020;
+    color:var(--white);
+  }
+
+  .controls{
+    padding:18px 22px;
+    background:var(--white);
+    border-bottom:2px solid var(--parchment-line);
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    align-items:flex-end;
+  }
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+  }
+  .field label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  select, .num-input{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:15px;
+    padding:9px 12px;
+    border-radius:8px;
+    border:1.5px solid #C7BE9E;
+    background:var(--parchment);
+    color:var(--ink);
+    min-width:120px;
+  }
+  select:focus, .num-input:focus, button:focus-visible{
+    outline:3px solid var(--crate);
+    outline-offset:1px;
+  }
+  .btn{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    padding:10px 18px;
+    border-radius:8px;
+    border:none;
+    cursor:pointer;
+    transition:transform .08s ease;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--leaf); color:var(--white);}
+  .btn-primary:hover{background:var(--leaf-deep);}
+  .btn-ghost{background:transparent; color:var(--ink-soft); border:1.5px solid #C7BE9E;}
+  .btn-ghost:hover{background:#EEE7D2;}
+  .btn-share{background:var(--crate); color:var(--ink);}
+  .btn-share:hover{background:var(--crate-deep); color:var(--white);}
+
+  .toast{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    padding:10px 14px;
+    border-radius:8px;
+    background:#233020;
+    color:var(--white);
+    min-height:16px;
+    max-width:320px;
+  }
+  .toast:empty{ display:none; }
+  .toast:not(:empty){
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    transform:translateX(-50%);
+    z-index:999;
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  }
+  .toast.warn{background:var(--alert);}
+
+  .summary-bar{
+    padding:10px 22px;
+    background:#EFE9D6;
+    display:flex;
+    gap:22px;
+    flex-wrap:wrap;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    border-bottom:1px solid var(--parchment-line);
+  }
+  .summary-bar b{color:var(--ink); font-size:15px;}
+
+  #matrix-wrap{
+    padding:18px 22px 24px;
+    overflow-x:auto;
+  }
+  table.grid{
+    border-collapse:collapse;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+  }
+  table.grid th, table.grid td{
+    border:1px solid var(--parchment-line);
+    text-align:center;
+    padding:0;
+  }
+  table.grid thead th{
+    background:var(--ink);
+    color:var(--white);
+    padding:6px 4px;
+    position:sticky;
+    top:0;
+    z-index:3;
+    min-width:30px;
+  }
+  table.grid thead th.corner{
+    left:0;
+    z-index:4;
+    min-width:64px;
+  }
+  table.grid tbody th{
+    background:var(--white);
+    position:sticky;
+    left:0;
+    z-index:2;
+    padding:5px 10px;
+    text-align:left;
+    font-weight:600;
+    color:var(--ink);
+    white-space:nowrap;
+    border-right:2px solid var(--crate);
+  }
+  tr.group-start td, tr.group-start th{
+    border-top:2.5px solid var(--ink);
+  }
+  tr.group-corr-row th, tr.group-corr-row td.corr-num{
+    background:var(--crate);
+    color:var(--white);
+    font-weight:700;
+    padding:4px 4px;
+  }
+  tr.group-corr-row th{
+    text-align:left;
+    padding-left:10px;
+    white-space:nowrap;
+  }
+  tbody tr:nth-child(odd) td{background:rgba(255,255,255,0.55);}
+  tbody tr:nth-child(even) td{background:rgba(255,255,255,0.85);}
+
+  td.cell{
+    width:30px; height:28px;
+    cursor:pointer;
+    transition:background .1s ease;
+  }
+  td.cell:hover{background:#FFF4DC !important;}
+  td.cell .mark{
+    display:inline-block;
+    font-size:16px;
+    color:var(--leaf-deep);
+    transform:rotate(-8deg);
+    font-weight:700;
+  }
+  td.cell.filled{ }
+
+  .row-total{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    background:var(--white) !important;
+    position:sticky;
+    right:0;
+  }
+
+  footer{
+    padding:16px 22px 22px;
+    background:var(--white);
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    border-top:2px solid var(--parchment-line);
+  }
+  .foot-note{
+    font-size:12px;
+    color:var(--ink-soft);
+    max-width:420px;
+  }
+
+  /* ---- Modal de selección para compartir ---- */
+  .modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(15,20,10,0.62);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:50;
+    padding:0;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{
+    background:var(--parchment);
+    width:100%;
+    max-width:640px;
+    max-height:88vh;
+    border-radius:16px 16px 0 0;
+    display:flex;
+    flex-direction:column;
+    box-shadow:0 -10px 40px rgba(0,0,0,0.4);
+  }
+  @media (min-width:700px){
+    .modal-overlay{ align-items:center; }
+    .modal-box{ border-radius:16px; max-height:80vh; }
+  }
+  .modal-head{
+    padding:16px 20px 12px;
+    border-bottom:1px solid var(--parchment-line);
+  }
+  .modal-head h2{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:18px;
+    margin:0 0 4px;
+    color:var(--ink);
+  }
+  .modal-head p{
+    margin:0;
+    font-size:12.5px;
+    color:var(--ink-soft);
+  }
+  .modal-actions-row{
+    padding:10px 20px;
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    border-bottom:1px solid var(--parchment-line);
+  }
+  .btn-mini{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    padding:6px 10px;
+    border-radius:6px;
+    border:1.5px solid #C7BE9E;
+    background:var(--white);
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .btn-mini:hover{ background:#EEE7D2; }
+  .modal-list{
+    padding:8px 20px;
+    overflow-y:auto;
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(230px,1fr));
+    gap:6px 16px;
+  }
+  .group-block{
+    padding:8px 0;
+    border-bottom:1px dashed var(--parchment-line);
+  }
+  .group-block-title{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:14px;
+    color:var(--ink);
+    margin-bottom:6px;
+    cursor:pointer;
+  }
+  .sub-checks{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px 14px;
+    padding-left:22px;
+  }
+  .sub-check{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:var(--ink-soft);
+  }
+  .sub-check input, .group-block-title input{
+    width:16px; height:16px;
+    accent-color:var(--leaf);
+    cursor:pointer;
+  }
+  .sub-check .badge-count{
+    background:#E7F0DE;
+    color:var(--leaf-deep);
+    border-radius:5px;
+    padding:0 4px;
+    font-size:10.5px;
+  }
+  .modal-foot{
+    padding:14px 20px 18px;
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    border-top:1px solid var(--parchment-line);
+  }
+
+  /* ---- Módulos: chip legend, selector, picker, jornada ---- */
+  .module-legend{
+    padding:10px 22px;
+    background:var(--white);
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    border-bottom:1px solid var(--parchment-line);
+  }
+  .module-legend .legend-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  .module-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:5px 10px;
+    border-radius:999px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    font-weight:600;
+  }
+  .module-chip .sym{ font-size:13px; }
+  #moduleFieldWrap{ display:none; }
+  .config-btn{
+    background:var(--parchment);
+    color:var(--ink);
+    border:1.5px solid #C7BE9E;
+  }
+  .config-btn:hover{ background:#EEE7D2; }
+
+  .num-modulos-row{
+    padding:16px 20px 6px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .num-modulos-row .num-input{ width:80px; }
+  #moduleNameFields{
+    padding:6px 20px 4px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .module-name-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .module-swatch{
+    width:34px; height:34px;
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px;
+    font-weight:700;
+    flex-shrink:0;
+  }
+  .module-name-row input[type="text"]{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1.5px solid #C7BE9E;
+    background:var(--parchment);
+    color:var(--ink);
+    flex:1;
+    min-width:0;
+  }
+  .module-picker-list{
+    padding:16px 20px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .module-picker-btn{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
+    border-radius:10px;
+    border:1.5px solid #C7BE9E;
+    background:var(--white);
+    cursor:pointer;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px;
+    font-weight:600;
+    color:var(--ink);
+    text-align:left;
+  }
+  .module-picker-btn:hover{ background:#F5F1E4; }
+  @media (max-width:640px){
+    .controls{padding:14px;}
+    #matrix-wrap{padding:14px;}
+    footer{padding:14px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet" id="sheet">
+  <header>
+    <p class="eyebrow">Acopio · Recepción de cosecha</p>
+    <h1>Control de Bines por Correlativo</h1>
+    <p class="sub">Registro consolidado de bines recepcionados desde campo, por grupo y subgrupo.</p>
+    <p style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9a9284; margin:2px 0 0;">v4.8 · Guardado separado por fecha (cada día en su propio registro)</p>
+    <div class="fecha-row">
+      <label for="fecha">Fecha</label>
+      <input type="date" id="fecha">
+      <span id="syncStatus" style="margin-left:10px; font-size:12px; color:var(--ink-soft, #777); display:inline-flex; align-items:center; gap:4px;"></span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="field">
+      <label for="subgrupo">Subgrupo</label>
+      <select id="subgrupo"></select>
+    </div>
+    <div class="field">
+      <label for="correlativo">Correlativo del bin</label>
+      <select id="correlativo"></select>
+    </div>
+    <div class="field" id="moduleFieldWrap">
+      <label for="moduleSelect">Módulo</label>
+      <select id="moduleSelect"></select>
+    </div>
+    <div class="field">
+      <label for="maxcol">N.º máx. de bines</label>
+      <input class="num-input" type="number" id="maxcol" min="5" max="80" value="40" style="width:90px;">
+    </div>
+    <button class="btn btn-primary" id="registrarBtn">Registrar bin</button>
+    <button class="btn btn-ghost" id="undoBtn">Deshacer último</button>
+    <button class="btn config-btn" id="configModulosBtn">⚙️ Módulos de hoy</button>
+    <button class="btn btn-share" id="compareBtn">🔍 Comparar con AcopioArato</button>
+    <button class="btn btn-share" id="compareCampoAcopioBtn">📦 Campo vs Acopio (por módulos)</button>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="module-legend" id="moduleLegend" style="display:none;">
+    <span class="legend-label">Módulos de hoy:</span>
+  </div>
+
+  <div class="summary-bar" id="summaryBar"></div>
+
+  <div id="matrix-wrap">
+    <table class="grid" id="grid"></table>
+  </div>
+
+  <footer>
+    <div class="foot-note">El botón de abajo te deja elegir qué grupos y subgrupos incluir en la imagen antes de compartirla directamente por WhatsApp (en celular). En computador se descarga la imagen.</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn btn-ghost" id="clearBtn">Limpiar todo</button>
+      <button class="btn btn-share" id="shareBtn">📤 Compartir como imagen a WhatsApp</button>
+    </div>
+  </footer>
+</div>
+
+<div class="modal-overlay" id="shareModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>¿Qué grupos incluye la imagen?</h2>
+      <p>Marca solo los subgrupos con los que trabajaste hoy. Los que ya tienen registros vienen preseleccionados.</p>
+    </div>
+    <div class="modal-actions-row">
+      <button class="btn-mini" id="selAllBtn">Seleccionar todos</button>
+      <button class="btn-mini" id="selNoneBtn">Ninguno</button>
+      <button class="btn-mini" id="selWorkedBtn">Solo con registros</button>
+    </div>
+    <div class="modal-list" id="modalList"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="modalCancelBtn">Cancelar</button>
+      <button class="btn btn-share" id="modalConfirmBtn">Generar y compartir</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="jornadaModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Configura la jornada de hoy</h2>
+      <p>¿Cuántos módulos vas a cosechar hoy? Cada módulo se marcará con un símbolo y color distinto en la hoja.</p>
+    </div>
+    <div class="num-modulos-row">
+      <label for="numModulos" style="font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft);">N.º de módulos</label>
+      <input class="num-input" type="number" id="numModulos" min="1" max="4" value="1">
+    </div>
+    <div id="moduleNameFields"></div>
+    <div class="modal-foot">
+      <button class="btn btn-share" id="jornadaConfirmBtn">Guardar y continuar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modulePickerModal">
+  <div class="modal-box" style="max-width:400px;">
+    <div class="modal-head">
+      <h2 id="modulePickerTitle">¿A qué módulo pertenece este bin?</h2>
+    </div>
+    <div class="module-picker-list" id="modulePickerList"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="modulePickerCancelBtn">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="compareModal">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-head">
+      <h2>Comparación con AcopioArato</h2>
+      <p>Se compara, para la fecha <b id="compareFechaLabel"></b>, cuántos bines tienes registrados aquí por subgrupo contra los que figuran en la hoja de Google Sheets (pestaña AcopioArato).</p>
+    </div>
+    <div id="compareBody" style="font-family:'IBM Plex Sans',sans-serif; font-size:13px; max-height:50vh; overflow-y:auto;">
+      <div id="compareLoading" style="padding:20px 0; text-align:center; color:var(--ink-soft);">Conectando con Google Sheets…</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="compareCloseBtn">Cerrar</button>
+      <button class="btn btn-ghost" id="compareShareBtn">📤 Compartir como imagen</button>
+      <button class="btn btn-share" id="compareRetryBtn" style="display:none;">Reintentar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="campoAcopioModal">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-head">
+      <h2>Comparación de Bines Campo vs Acopio</h2>
+      <p>Para la fecha <b id="campoAcopioFechaLabel"></b>, se compara el total de bines ingresados en campo (agrupados por módulo) contra el total que figura en la hoja de Google Sheets (pestaña AcopioArato).</p>
+    </div>
+    <div id="campoAcopioBody" style="font-family:'IBM Plex Sans',sans-serif; font-size:13px; max-height:55vh; overflow-y:auto;">
+      <div id="campoAcopioLoading" style="padding:20px 0; text-align:center; color:var(--ink-soft);">Conectando con Google Sheets…</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="campoAcopioCloseBtn">Cerrar</button>
+      <button class="btn btn-ghost" id="campoAcopioShareBtn">📤 Compartir como imagen</button>
+      <button class="btn btn-share" id="campoAcopioRetryBtn" style="display:none;">Reintentar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L','M'];
+const SUBS = ['001','002','003','004'];
+const STORAGE_KEY = 'bines-control-data';
+// A partir de v4.8 el guardado se particiona POR FECHA: cada día tiene su propio
+// "cajón" de datos (bines-control-data:2026-07-09, bines-control-data:2026-07-10, etc.).
+// Así, al abrir la app en otro celular o al cambiar la fecha, nunca se arrastran ni se
+// pisan los registros de un día distinto; cada fecha queda guardada por separado.
+function storageKeyFor(fecha){
+  return STORAGE_KEY + ':' + (fecha || 'sinfecha');
+}
+// Pega aquí la URL de tu Web App de Google Apps Script (ver instrucciones que te di aparte).
+// Mientras no la reemplaces, la app funciona solo local (localStorage) en cada dispositivo.
+const APPS_SCRIPT_URL = 'PEGA_AQUI_LA_URL_DE_TU_APPS_SCRIPT';
+const SYNC_POLL_MS = 8000; // cada cuánto revisa cambios de otros usuarios
+const MODULE_STYLES = [
+  { symbol:'✓', color:'#4C6B3F', bg:'#E7F0DE' },
+  { symbol:'✗', color:'#B23A2E', bg:'#F7DAD6' },
+  { symbol:'◆', color:'#2E5C8A', bg:'#D9E6F2' },
+  { symbol:'★', color:'#7A4FA0', bg:'#EAE0F2' }
+];
+const FALLBACK_STYLE = { symbol:'•', color:'#8A8578', bg:'#EDEAE0' };
+
+let maxCol = 40;
+let data = { fecha: '', marks: {}, modules: [], modulesDate: '' };
+// marks['A01'] = { '1': 'm0', '5': 'm1', ... }  -> value is the id of the module that bin belongs to
+let undoStack = [];
+// Referencias directas a las celdas y totales ya dibujados, para poder actualizar
+// UN solo bin sin reconstruir toda la tabla (más rápido y evita que el resto de
+// celdas "salte" de posición, que es lo que provoca toques accidentales sobre la
+// celda equivocada cuando se registran muchos bines seguidos).
+let cellElements = {};
+let rowTotalElements = {};
+let renderedGroups = new Set();
+let pendingCell = null; // { key, col } awaiting module choice from the picker modal
+
+function subKey(letter, sub){ return letter + sub; }
+
+// Asegura que cualquier valor de fecha quede como "YYYY-MM-DD" puro,
+// sin importar si venía con hora/zona horaria (ej. "2026-07-07T05:00:00.000Z")
+// por datos antiguos, sincronización remota, o cualquier otra fuente.
+function normalizeFechaISO(raw){
+  if(!raw) return '';
+  const m = String(raw).match(/^(\d{4}-\d{2}-\d{2})/);
+  if(m) return m[1];
+  const d = new Date(raw);
+  if(!isNaN(d)) return d.toISOString().slice(0,10);
+  return String(raw);
+}
+
+function defaultModules(){
+  return [{ id:'m0', name:'Módulo 1', ...MODULE_STYLES[0] }];
+}
+
+function defaultData(){
+  const marks = {};
+  GROUPS.forEach(g => SUBS.forEach(s => marks[subKey(g,s)] = {}));
+  return { fecha: new Date().toISOString().slice(0,10), marks, modules: defaultModules(), modulesDate: '' };
+}
+
+function moduleById(id){
+  return (data.modules || []).find(m => m.id === id);
+}
+
+function moduleStyleFor(id){
+  const m = moduleById(id);
+  return m ? m : FALLBACK_STYLE;
+}
+
+// Guardado persistente: usa window.storage si está disponible (entorno Claude Artifacts)
+// y si no, localStorage del navegador. Así, aunque se cierre o se mate por error la
+// pestaña/ventana, al volver a abrir el archivo se recupera todo lo registrado.
+const hasCloudStorage = (typeof window !== 'undefined' && window.storage && typeof window.storage.get === 'function' && typeof window.storage.set === 'function');
+
+async function readStorage(key){
+  if(hasCloudStorage){
+    try{
+      const res = await window.storage.get(key, false);
+      if(res && res.value) return res.value;
+    } catch(e){
+      // Es normal que falle la primera vez (aún no existe el dato guardado).
+      // Seguimos abajo intentando localStorage como respaldo, sin mostrar error.
+    }
+  }
+  try{
+    return localStorage.getItem(key);
+  } catch(e){
+    return null;
+  }
+}
+
+async function writeStorage(key, payload){
+  let cloudOk = false;
+  if(hasCloudStorage){
+    try{
+      await window.storage.set(key, payload, false);
+      cloudOk = true;
+    } catch(e){
+      // Si falla el guardado en la nube, seguimos con localStorage como respaldo.
+    }
+  }
+  let localOk = false;
+  try{
+    localStorage.setItem(key, payload);
+    localOk = true;
+  } catch(e){
+    // localStorage puede no estar disponible en algunos navegadores/modos privados.
+  }
+  return cloudOk || localOk;
+}
+
+function remoteConfigured(){
+  return APPS_SCRIPT_URL && !APPS_SCRIPT_URL.includes('PEGA_AQUI');
+}
+
+async function fetchRemoteState(){
+  if(!remoteConfigured()) return null;
+  try{
+    const res = await fetch(APPS_SCRIPT_URL, { method: 'GET' });
+    if(!res.ok) return null;
+    const json = await res.json();
+    if(json && json.data) return json;
+    return null;
+  } catch(e){
+    return null;
+  }
+}
+
+async function pushRemoteState(payloadObj){
+  if(!remoteConfigured()) return false;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000); // no dejar que una señal mala trabe el guardado
+  try{
+    // Content-Type text/plain evita que el navegador dispare un preflight CORS
+    // que Google Apps Script no maneja bien.
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payloadObj),
+      signal: controller.signal
+    });
+    const json = await res.json();
+    return !!(json && json.ok);
+  } catch(e){
+    return false;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ============================================================================
+// GUARDADO: dos capas independientes.
+// 1) Local (localStorage / window.storage): instantáneo, en cada cambio.
+// 2) Remoto (Google Sheets vía Apps Script): agrupado (debounce) y con un
+//    candado que garantiza que NUNCA haya dos envíos en paralelo. Esto es
+//    clave: dos peticiones POST simultáneas al Apps Script pueden llegar y
+//    procesarse en orden distinto al que salieron, y la que "gana" puede ser
+//    la más vieja — así es como se pierde un bin sin que el usuario note nada.
+// ============================================================================
+
+// --- Capa local ---
+let localSaveInProgress = false;
+let localSavePending = false;
+let localSaveFailWarned = false;
+async function flushLocalSave(){
+  if(localSaveInProgress){
+    localSavePending = true;
+    return;
+  }
+  localSaveInProgress = true;
+  do{
+    localSavePending = false;
+    try{
+      const payload = JSON.stringify({ data, maxCol });
+      const ok = await writeStorage(storageKeyFor(data.fecha), payload);
+      if(ok){
+        localSaveFailWarned = false;
+      } else if(!localSaveFailWarned){
+        // Avisamos una sola vez (no en cada intento) para no saturar de toasts
+        // durante una ráfaga de registros, pero el usuario SÍ debe enterarse.
+        localSaveFailWarned = true;
+        showToast('⚠ No se pudo guardar en este dispositivo (memoria llena o modo privado). Comparte/exporta pronto para no perder tu avance.', true);
+      }
+    } catch(e){
+      console.error('No se pudo guardar localmente', e);
+      if(!localSaveFailWarned){
+        localSaveFailWarned = true;
+        showToast('⚠ No se pudo guardar en este dispositivo', true);
+      }
+    }
+  } while(localSavePending);
+  localSaveInProgress = false;
+}
+
+// --- Capa remota (agrupada + serializada + con reintento) ---
+const REMOTE_PUSH_DEBOUNCE_MS = 900; // agrupa ráfagas de registros en un solo envío
+const REMOTE_PUSH_RETRY_MS = 4000;   // si falla, reintenta sin esperar a un nuevo cambio
+let remotePushTimer = null;
+let remotePushInProgress = false;
+let remotePushPendingAgain = false;
+
+// "Reset pendiente": cuando el usuario presiona "Limpiar todo", lo local queda
+// vacío al instante, pero el servidor (Google Sheets) todavía puede tener los
+// datos viejos por unos segundos hasta que el envío se confirme. Mientras este
+// flag esté activo, NO combinamos lo local con lo remoto (eso reintroduciría lo
+// que se acaba de borrar): lo local manda, y solo reintentamos empujarlo hasta
+// que el servidor quede igual. Se guarda en localStorage para que sobreviva
+// aunque se cierre o recargue la página antes de que el envío se confirme.
+const RESET_PENDING_KEY = 'bines-control-reset-pending';
+function resetPendingKeyFor(fecha){ return RESET_PENDING_KEY + ':' + (fecha || 'sinfecha'); }
+function markResetPending(fecha){
+  try{ localStorage.setItem(resetPendingKeyFor(fecha), String(Date.now())); } catch(e){}
+}
+function clearResetPending(fecha){
+  try{ localStorage.removeItem(resetPendingKeyFor(fecha)); } catch(e){}
+}
+function isResetPending(fecha){
+  try{ return !!localStorage.getItem(resetPendingKeyFor(fecha)); } catch(e){ return false; }
+}
+
+function setSyncStatus(state){
+  const el = document.getElementById('syncStatus');
+  if(!el) return;
+  if(!remoteConfigured()){ el.textContent = ''; return; }
+  if(state === 'saving') el.textContent = '⏳ Sincronizando…';
+  else if(state === 'saved') el.textContent = '✓ Sincronizado';
+  else if(state === 'error') el.textContent = '⚠ Sin sincronizar (reintentando…)';
+  else el.textContent = '';
+}
+
+function scheduleRemotePush(){
+  if(!remoteConfigured()) return;
+  clearTimeout(remotePushTimer);
+  remotePushTimer = setTimeout(runRemotePush, REMOTE_PUSH_DEBOUNCE_MS);
+}
+
+async function runRemotePush(){
+  if(remotePushInProgress){
+    // Ya hay un envío en curso: no lanzamos uno nuevo en paralelo, solo
+    // marcamos que hace falta otro más apenas termine el actual.
+    remotePushPendingAgain = true;
+    return;
+  }
+  remotePushInProgress = true;
+  let ok = true;
+  do{
+    remotePushPendingAgain = false;
+    setSyncStatus('saving');
+    // Se toma el estado ACTUAL de "data" justo en este momento (siempre el más
+    // reciente, incluyendo cualquier bin registrado mientras esperábamos turno).
+    ok = await pushRemoteState({ data, maxCol });
+    setSyncStatus(ok ? 'saved' : 'error');
+  } while(remotePushPendingAgain);
+  remotePushInProgress = false;
+  if(!ok){
+    showToast('No se pudo sincronizar con Google Sheets (se guardó local; reintentando)', true);
+    remotePushTimer = setTimeout(runRemotePush, REMOTE_PUSH_RETRY_MS);
+  } else {
+    // El servidor ya refleja lo local. Si veníamos de un "Limpiar todo", ya es
+    // seguro volver a confiar en lo remoto para futuras combinaciones.
+    clearResetPending(data.fecha);
+  }
+}
+
+// Punto único de entrada usado por toda la app para guardar cualquier cambio.
+function queueSave(){
+  flushLocalSave();     // seguro local inmediato, nunca se demora por la red
+  scheduleRemotePush();  // envío a Sheets agrupado y sin solapes
+}
+
+// Marca de tiempo del último cambio hecho en este dispositivo (registrar, desmarcar, etc.).
+// Se usa para que el sondeo remoto nunca pise un cambio reciente que aún no terminó
+// de reflejarse en Google Sheets (evita que "se borre" el bin recién ingresado).
+let lastLocalChangeAt = 0;
+function markLocalChange(){ lastLocalChangeAt = Date.now(); }
+
+// Combina las marcas locales y remotas SIN perder ningún bin registrado en ninguna
+// de las dos copias: un bin marcado en cualquiera de los dos lados se conserva.
+// Esto evita que una lectura remota desactualizada (o un local desactualizado)
+// borre un registro que sí existe en la otra copia.
+function mergeMarksAdditively(localMarks, remoteMarks){
+  const merged = {};
+  const allKeys = new Set([...Object.keys(localMarks || {}), ...Object.keys(remoteMarks || {})]);
+  allKeys.forEach(key => {
+    merged[key] = Object.assign({}, (remoteMarks && remoteMarks[key]) || {}, (localMarks && localMarks[key]) || {});
+  });
+  return merged;
+}
+
+function anyModalOpen(){
+  return !!document.querySelector('.modal-overlay.open');
+}
+
+let syncTimer = null;
+function startSyncPolling(){
+  if(!remoteConfigured() || syncTimer) return;
+  syncTimer = setInterval(async () => {
+    if(anyModalOpen()) return; // no interrumpir mientras el usuario está en un modal
+    // Si hay un guardado en curso (local o remoto), o hubo un cambio local hace muy
+    // poco (menos de 2 ciclos de sondeo), esperamos: la copia remota podría aún no
+    // reflejar ese cambio y no queremos pisarlo.
+    if(localSaveInProgress || localSavePending || remotePushInProgress || remotePushPendingAgain) return;
+    if(Date.now() - lastLocalChangeAt < SYNC_POLL_MS * 2) return;
+    if(isResetPending(data.fecha)){
+      // Acabamos de "Limpiar todo" y el servidor podría seguir teniendo los
+      // datos viejos. NO combinamos (eso los traería de vuelta): simplemente
+      // reintentamos empujar lo local (vacío) hasta que el servidor quede igual.
+      scheduleRemotePush();
+      return;
+    }
+    const remote = await fetchRemoteState();
+    if(!remote) return;
+    // Solo combinamos si lo remoto corresponde a la MISMA fecha que estamos viendo
+    // ahora; si el usuario cambió de fecha en este dispositivo mientras tanto, un
+    // remoto de otro día no debe mezclarse con la tabla que está viendo ahora.
+    if(normalizeFechaISO(remote.data && remote.data.fecha) !== data.fecha) return;
+    const localSnapshot = JSON.stringify({ data, maxCol });
+    const remoteSnapshot = JSON.stringify({ data: remote.data, maxCol: remote.maxCol || 40 });
+    if(localSnapshot !== remoteSnapshot){
+      // Nunca reemplazamos data.marks directamente: se combinan ambas copias para
+      // no perder bines registrados aquí que el servidor aún no tenía.
+      const mergedMarks = mergeMarksAdditively(data.marks, remote.data.marks);
+      const hadExtra = JSON.stringify(mergedMarks) !== JSON.stringify(remote.data.marks);
+      data = remote.data;
+      data.marks = mergedMarks;
+      maxCol = Math.max(remote.maxCol || 40, maxCol || 40);
+      if(!data.modules) data.modules = [];
+      if(data.modulesDate === undefined) data.modulesDate = '';
+      migrateSubgroupKeys();
+      renderGrid();
+      // Si el merge trajo de vuelta datos que el servidor no tenía, re-enviamos
+      // para que Sheets quede al día con la versión completa cuanto antes.
+      if(hadExtra) queueSave();
+    }
+  }, SYNC_POLL_MS);
+}
+
+function migrateSubgroupKeys(){
+  if(!data.marks) return;
+  let changed = false;
+  const newMarks = {};
+  Object.keys(data.marks).forEach(k => {
+    const m = k.match(/^([A-Z])(\d+)$/);
+    if(m){
+      const letter = m[1];
+      let digits = m[2];
+      if(digits.length < 3){
+        digits = digits.padStart(3,'0');
+        changed = true;
+      }
+      const newKey = letter + digits;
+      newMarks[newKey] = Object.assign({}, newMarks[newKey] || {}, data.marks[k]);
+    } else {
+      newMarks[k] = data.marks[k];
+    }
+  });
+  if(changed) data.marks = newMarks;
+}
+
+// Carga los datos de UNA fecha específica (targetFecha, "YYYY-MM-DD"). Cada fecha
+// vive en su propio cajón de almacenamiento (ver storageKeyFor), así que abrir la
+// app en otro celular, u otro día, jamás sobrescribe ni arrastra los registros de
+// una fecha distinta: si esa fecha nunca se llenó, simplemente empieza vacía.
+async function loadData(targetFecha){
+  const fallbackMaxCol = maxCol || 40; // conserva la preferencia de columnas ya usada en esta sesión
+  const key = storageKeyFor(targetFecha);
+  try{
+    const remote = await fetchRemoteState();
+    // Leemos también lo que ya hubiera guardado ESTE dispositivo para esta fecha,
+    // para poder combinarlo con lo remoto. Si el último guardado remoto falló justo
+    // antes de recargar la página (red inestable, app cerrada de golpe, etc.), lo
+    // remoto puede estar desactualizado; sin este merge se perdería lo local.
+    let localParsed = null;
+    try{
+      const raw = await readStorage(key);
+      if(raw) localParsed = JSON.parse(raw);
+    } catch(e){ /* si el local está corrupto, simplemente lo ignoramos */ }
+
+    // Lo remoto (Google Sheets vía Apps Script) solo es válido aquí si corresponde
+    // a ESTA misma fecha; si no, lo ignoramos para no mezclar días distintos.
+    const remoteMatchesFecha = remote && remote.data && normalizeFechaISO(remote.data.fecha) === targetFecha;
+
+    if(remoteMatchesFecha){
+      if(isResetPending(targetFecha)){
+        // El usuario limpió todo pero el envío nunca llegó a confirmarse (por
+        // ejemplo, cerró la app antes de tiempo). Lo remoto puede seguir
+        // teniendo los datos viejos: NO se combina, se respeta el vaciado
+        // local y se reintenta el envío para que el servidor se ponga al día.
+        if(localParsed && localParsed.data){
+          data = localParsed.data;
+          maxCol = localParsed.maxCol || fallbackMaxCol;
+        } else {
+          data = defaultData();
+          data.fecha = targetFecha;
+          maxCol = fallbackMaxCol;
+        }
+        data.fecha = normalizeFechaISO(data.fecha) || targetFecha;
+        if(!data.modules || data.modules.length === 0) data.modules = [];
+        if(data.modulesDate === undefined) data.modulesDate = '';
+        markLocalChange();
+        queueSave();
+        return;
+      }
+      data = remote.data;
+      maxCol = Math.max(remote.maxCol || fallbackMaxCol, (localParsed && localParsed.maxCol) || 0);
+      let recoveredExtra = false;
+      if(localParsed && localParsed.data && localParsed.data.marks){
+        const merged = mergeMarksAdditively(localParsed.data.marks, data.marks);
+        recoveredExtra = JSON.stringify(merged) !== JSON.stringify(data.marks);
+        data.marks = merged;
+      }
+      data.fecha = normalizeFechaISO(data.fecha) || targetFecha;
+      if(!data.modules || data.modules.length === 0) data.modules = [];
+      if(data.modulesDate === undefined) data.modulesDate = '';
+      migrateSubgroupKeys();
+      try{ localStorage.setItem(key, JSON.stringify({ data, maxCol })); } catch(e){}
+      // Si el merge recuperó algo que el servidor no tenía, lo reenviamos ya
+      // mismo para que Sheets quede al día cuanto antes. Si no había nada nuevo,
+      // no generamos tráfico de red innecesario en cada apertura de la app.
+      if(recoveredExtra){
+        markLocalChange();
+        queueSave();
+      }
+      return;
+    }
+    if(localParsed){
+      data = localParsed.data;
+      maxCol = localParsed.maxCol || fallbackMaxCol;
+      data.fecha = normalizeFechaISO(data.fecha) || targetFecha;
+      if(!data.modules || data.modules.length === 0) data.modules = [];
+      if(data.modulesDate === undefined) data.modulesDate = '';
+    } else {
+      // Nada guardado todavía para esta fecha: se abre una tabla limpia,
+      // sin arrastrar los bines de otro día.
+      data = defaultData();
+      data.fecha = targetFecha;
+      maxCol = fallbackMaxCol;
+    }
+  } catch(e){
+    console.error('No se pudo cargar la información guardada', e);
+    data = defaultData();
+    data.fecha = targetFecha;
+  }
+  migrateSubgroupKeys();
+}
+
+function showToast(msg, warn){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (warn ? ' warn' : '');
+  if(warn && navigator.vibrate){
+    try{ navigator.vibrate(200); } catch(e){}
+  }
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(()=>{ t.textContent=''; t.className='toast'; }, warn ? 5000 : 3200);
+}
+
+function populateSubgrupoSelect(){
+  const sel = document.getElementById('subgrupo');
+  sel.innerHTML = '';
+  GROUPS.forEach(g => {
+    const og = document.createElement('optgroup');
+    og.label = 'Grupo ' + g;
+    SUBS.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = subKey(g,s);
+      opt.textContent = g + s;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+}
+
+function populateCorrelativoSelect(){
+  const sel = document.getElementById('correlativo');
+  sel.innerHTML = '';
+  for(let i=1;i<=maxCol;i++){
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = i;
+    sel.appendChild(opt);
+  }
+}
+
+function populateModuleSelect(){
+  const wrap = document.getElementById('moduleFieldWrap');
+  const sel = document.getElementById('moduleSelect');
+  const modules = data.modules || [];
+  if(modules.length <= 1){
+    wrap.style.display = 'none';
+    sel.innerHTML = '';
+    return;
+  }
+  wrap.style.display = 'flex';
+  sel.innerHTML = '<option value="">-- Selecciona módulo --</option>';
+  modules.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = `${m.symbol} ${m.name}`;
+    sel.appendChild(opt);
+  });
+}
+
+function renderModuleLegend(){
+  const legend = document.getElementById('moduleLegend');
+  const modules = data.modules || [];
+  if(modules.length <= 1){
+    legend.style.display = 'none';
+    return;
+  }
+  legend.style.display = 'flex';
+  legend.innerHTML = '<span class="legend-label">Módulos de hoy:</span>' +
+    modules.map(m => `<span class="module-chip" style="background:${m.bg}; color:${m.color};"><span class="sym">${m.symbol}</span>${m.name} · ${countForModule(m.id)}</span>`).join('');
+}
+
+function countForModule(moduleId){
+  let total = 0;
+  Object.values(data.marks).forEach(m => {
+    Object.values(m).forEach(v => { if(v === moduleId) total++; });
+  });
+  return total;
+}
+
+function groupHasData(g){
+  return SUBS.some(s => {
+    const m = data.marks[subKey(g,s)];
+    return m && Object.keys(m).length > 0;
+  });
+}
+
+function renderGrid(){
+  const table = document.getElementById('grid');
+  table.innerHTML = '';
+  cellElements = {};
+  rowTotalElements = {};
+
+  const activeGroups = GROUPS.filter(groupHasData);
+  renderedGroups = new Set(activeGroups);
+
+  if(activeGroups.length === 0){
+    table.style.display = 'none';
+    let empty = document.getElementById('gridEmptyMsg');
+    if(!empty){
+      empty = document.createElement('div');
+      empty.id = 'gridEmptyMsg';
+      empty.style.cssText = 'padding:18px; font-family:"IBM Plex Sans",sans-serif; color:var(--ink-soft); font-size:14px;';
+      empty.textContent = 'Aún no has registrado ningún bin. Selecciona un subgrupo y correlativo arriba y presiona "Registrar bin" para comenzar; el grupo aparecerá aquí automáticamente.';
+      table.parentNode.insertBefore(empty, table);
+    }
+    empty.style.display = 'block';
+    renderModuleLegend();
+    renderSummary();
+    return;
+  } else {
+    table.style.display = '';
+    const empty = document.getElementById('gridEmptyMsg');
+    if(empty) empty.style.display = 'none';
+  }
+
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  const corner = document.createElement('th');
+  corner.className = 'corner';
+  corner.textContent = 'Subgrupo';
+  trh.appendChild(corner);
+  for(let i=1;i<=maxCol;i++){
+    const th = document.createElement('th');
+    th.textContent = i;
+    trh.appendChild(th);
+  }
+  const thTotal = document.createElement('th');
+  thTotal.textContent = 'Total';
+  trh.appendChild(thTotal);
+  thead.appendChild(trh);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  activeGroups.forEach(g => {
+    const trCorr = document.createElement('tr');
+    trCorr.className = 'group-corr-row';
+    const thGroup = document.createElement('th');
+    thGroup.textContent = 'Grupo ' + g;
+    trCorr.appendChild(thGroup);
+    for(let i=1;i<=maxCol;i++){
+      const tdCorr = document.createElement('td');
+      tdCorr.className = 'corr-num';
+      tdCorr.textContent = i;
+      trCorr.appendChild(tdCorr);
+    }
+    const tdCorrTotal = document.createElement('td');
+    tdCorrTotal.className = 'corr-num';
+    trCorr.appendChild(tdCorrTotal);
+    tbody.appendChild(trCorr);
+
+    SUBS.forEach((s, idx) => {
+      const key = subKey(g,s);
+      const tr = document.createElement('tr');
+      if(idx === 0) tr.classList.add('group-start');
+
+      const th = document.createElement('th');
+      th.textContent = key;
+      tr.appendChild(th);
+
+      let total = 0;
+      for(let i=1;i<=maxCol;i++){
+        const td = document.createElement('td');
+        td.className = 'cell';
+        const moduleId = data.marks[key] && data.marks[key][i];
+        if(moduleId){
+          const style = moduleStyleFor(moduleId);
+          td.classList.add('filled');
+          td.style.background = style.bg;
+          td.innerHTML = `<span class="mark" style="color:${style.color};">${style.symbol}</span>`;
+          total++;
+        } else {
+          td.innerHTML = '';
+        }
+        td.addEventListener('click', () => toggleCell(key, i));
+        tr.appendChild(td);
+        cellElements[key+'|'+i] = td;
+      }
+      const tdTotal = document.createElement('td');
+      tdTotal.className = 'row-total';
+      tdTotal.textContent = total;
+      tr.appendChild(tdTotal);
+      rowTotalElements[key] = tdTotal;
+
+      tbody.appendChild(tr);
+    });
+  });
+  table.appendChild(tbody);
+  renderModuleLegend();
+  renderSummary();
+
+  // Bloqueo breve de toques: como la tabla se acaba de reconstruir por completo
+  // (aparece/desaparece un grupo, undo, limpiar, sincronización, etc.), las celdas
+  // pueden haber cambiado de posición. Sin esto, un toque rápido inmediatamente
+  // después podría caer sobre la celda equivocada y desmarcar un bin sin querer.
+  table.style.pointerEvents = 'none';
+  clearTimeout(renderGrid._unlockTimer);
+  renderGrid._unlockTimer = setTimeout(() => { table.style.pointerEvents = ''; }, 350);
+}
+
+// Actualiza UNA sola celda (el caso normal al registrar o desmarcar un bin) sin
+// reconstruir toda la tabla. Es mucho más rápido con muchos correlativos/grupos,
+// y al no reconstruir el DOM, ninguna otra celda cambia de posición mientras el
+// usuario sigue registrando bines rápido.
+function updateSingleCell(key, col){
+  const g = key[0];
+  const wasActive = renderedGroups.has(g);
+  const isActiveNow = groupHasData(g);
+  if(wasActive !== isActiveNow){
+    // El grupo recién aparece (primer bin) o recién desaparece (se vació):
+    // esto sí cambia la estructura de la tabla, así que reconstruimos completo.
+    renderGrid();
+    return;
+  }
+  const td = cellElements[key+'|'+col];
+  if(!td){
+    // Salvaguarda: si por algún motivo no tenemos la referencia, reconstruimos.
+    renderGrid();
+    return;
+  }
+  const moduleId = data.marks[key] && data.marks[key][col];
+  if(moduleId){
+    const style = moduleStyleFor(moduleId);
+    td.className = 'cell filled';
+    td.style.background = style.bg;
+    td.innerHTML = `<span class="mark" style="color:${style.color};">${style.symbol}</span>`;
+  } else {
+    td.className = 'cell';
+    td.style.background = '';
+    td.innerHTML = '';
+  }
+  let total = 0;
+  const m = data.marks[key] || {};
+  for(let i=1;i<=maxCol;i++){ if(m[i]) total++; }
+  const tdTotal = rowTotalElements[key];
+  if(tdTotal) tdTotal.textContent = total;
+  renderModuleLegend();
+  renderSummary();
+}
+
+function renderSummary(){
+  const bar = document.getElementById('summaryBar');
+  let grand = 0;
+  const byGroup = {};
+  const activeGroups = GROUPS.filter(groupHasData);
+  activeGroups.forEach(g => {
+    let sum = 0;
+    SUBS.forEach(s => {
+      const key = subKey(g,s);
+      const m = data.marks[key] || {};
+      sum += Object.values(m).filter(Boolean).length;
+    });
+    byGroup[g] = sum;
+    grand += sum;
+  });
+  bar.innerHTML = `<span><b>${grand}</b> bines registrados en total</span>` +
+    activeGroups.map(g => `<span>${g}: <b>${byGroup[g]}</b></span>`).join('');
+}
+
+function toggleCell(key, col){
+  if(!data.marks[key]) data.marks[key] = {};
+  const wasFilled = !!data.marks[key][col];
+  if(wasFilled){
+    delete data.marks[key][col];
+    markLocalChange();
+    updateSingleCell(key, col);
+    queueSave();
+    showToast(`Bin ${key}-${col} desmarcado`);
+    return;
+  }
+  const modules = data.modules || [];
+  if(modules.length <= 1){
+    const moduleId = modules[0] ? modules[0].id : 'm0';
+    data.marks[key][col] = moduleId;
+    markLocalChange();
+    undoStack.push({ key, col });
+    updateSingleCell(key, col);
+    queueSave();
+    showToast(`Bin ${key}-${col} registrado`);
+  } else {
+    openModulePicker(key, col, `Bin ${key}-${col}: ¿a qué módulo pertenece?`);
+  }
+}
+
+function assignModule(key, col, moduleId){
+  if(!data.marks[key]) data.marks[key] = {};
+  data.marks[key][col] = moduleId;
+  markLocalChange();
+  undoStack.push({ key, col });
+  updateSingleCell(key, col);
+  queueSave();
+  const m = moduleById(moduleId);
+  showToast(`Bin ${key}-${col} registrado en ${m ? m.name : 'módulo'} ${m ? m.symbol : ''}`);
+}
+
+function openModulePicker(key, col, title){
+  pendingCell = { key, col };
+  document.getElementById('modulePickerTitle').textContent = title;
+  const list = document.getElementById('modulePickerList');
+  list.innerHTML = '';
+  (data.modules || []).forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'module-picker-btn';
+    btn.style.borderColor = m.color;
+    btn.innerHTML = `<span class="module-swatch" style="background:${m.bg}; color:${m.color};">${m.symbol}</span><span>${m.name}</span>`;
+    btn.addEventListener('click', async () => {
+      closeModulePicker();
+      if(pendingCell) await assignModule(pendingCell.key, pendingCell.col, m.id);
+    });
+    list.appendChild(btn);
+  });
+  document.getElementById('modulePickerModal').classList.add('open');
+}
+
+function closeModulePicker(){
+  pendingCell = null;
+  document.getElementById('modulePickerModal').classList.remove('open');
+}
+
+// Adelanta el correlativo al siguiente número disponible tras un registro exitoso,
+// para no depender de que el usuario acierte el <select> con el dedo en cada bin
+// (una causa muy probable de que, en una ráfaga de registros, un correlativo se
+// reenvíe dos veces por error y otro quede sin ingresar).
+function advanceCorrelativo(currentCol){
+  const sel = document.getElementById('correlativo');
+  const next = parseInt(currentCol, 10) + 1;
+  if(next <= maxCol){
+    sel.value = String(next);
+  }
+}
+
+async function registrar(){
+  const key = document.getElementById('subgrupo').value;
+  const col = document.getElementById('correlativo').value;
+  if(!data.marks[key]) data.marks[key] = {};
+  if(data.marks[key][col]){
+    showToast(`⚠ El bin ${key}-${col} YA ESTABA REGISTRADO (no se duplicó)`, true);
+    return;
+  }
+  const modules = data.modules || [];
+  if(modules.length <= 1){
+    const moduleId = modules[0] ? modules[0].id : 'm0';
+    await assignModule(key, col, moduleId);
+    advanceCorrelativo(col);
+    return;
+  }
+  const moduleSel = document.getElementById('moduleSelect');
+  const moduleId = moduleSel.value;
+  if(!moduleId){
+    showToast('Selecciona a qué módulo pertenece este bin', true);
+    return;
+  }
+  await assignModule(key, col, moduleId);
+  advanceCorrelativo(col);
+}
+
+function undo(){
+  const last = undoStack.pop();
+  if(!last){
+    showToast('No hay registros para deshacer', true);
+    return;
+  }
+  if(data.marks[last.key]) delete data.marks[last.key][last.col];
+  markLocalChange();
+  updateSingleCell(last.key, last.col);
+  queueSave();
+  showToast(`Deshecho: ${last.key}-${last.col}`);
+}
+
+function clearAll(){
+  if(!confirm('¿Seguro que deseas borrar todos los registros de la fecha ' + data.fecha + '? Esta acción no se puede deshacer. (No afecta a otras fechas ya guardadas.)')) return;
+  const keepModules = data.modules;
+  const keepModulesDate = data.modulesDate;
+  const keepFecha = data.fecha;
+  data = defaultData();
+  data.modules = keepModules;
+  data.modulesDate = keepModulesDate;
+  data.fecha = keepFecha;
+  document.getElementById('fecha').value = data.fecha;
+  markLocalChange();
+  markResetPending(data.fecha);
+  undoStack = [];
+  renderGrid();
+  queueSave();
+  showToast('Hoja reiniciada');
+}
+
+function changeMaxCol(){
+  const input = document.getElementById('maxcol');
+  let v = parseInt(input.value, 10);
+  if(isNaN(v) || v < 5) v = 5;
+  if(v > 80) v = 80;
+  maxCol = v;
+  input.value = v;
+  populateCorrelativoSelect();
+  renderGrid();
+  queueSave();
+}
+
+function renderModuleNameFields(count, existingNames){
+  const wrap = document.getElementById('moduleNameFields');
+  wrap.innerHTML = '';
+  for(let i=0;i<count;i++){
+    const style = MODULE_STYLES[i];
+    const row = document.createElement('div');
+    row.className = 'module-name-row';
+    const swatch = document.createElement('div');
+    swatch.className = 'module-swatch';
+    swatch.style.background = style.bg;
+    swatch.style.color = style.color;
+    swatch.textContent = style.symbol;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'modName' + i;
+    input.value = (existingNames && existingNames[i]) ? existingNames[i] : `Módulo ${i+1}`;
+    input.placeholder = `Nombre del módulo ${i+1} (ej. Fundo Norte)`;
+    row.appendChild(swatch);
+    row.appendChild(input);
+    wrap.appendChild(row);
+  }
+}
+
+function openJornadaModal(){
+  const existing = data.modules && data.modules.length ? data.modules : defaultModules();
+  const numInput = document.getElementById('numModulos');
+  numInput.value = existing.length;
+  renderModuleNameFields(existing.length, existing.map(m => m.name));
+  document.getElementById('jornadaModal').classList.add('open');
+}
+
+async function saveJornada(){
+  const numInput = document.getElementById('numModulos');
+  let count = parseInt(numInput.value, 10);
+  if(isNaN(count) || count < 1) count = 1;
+  if(count > MODULE_STYLES.length) count = MODULE_STYLES.length;
+  const modules = [];
+  for(let i=0;i<count;i++){
+    const nameInput = document.getElementById('modName' + i);
+    const name = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : `Módulo ${i+1}`;
+    modules.push({ id: 'm' + i, name, ...MODULE_STYLES[i] });
+  }
+  data.modules = modules;
+  data.modulesDate = data.fecha;
+  markLocalChange();
+  queueSave();
+  populateModuleSelect();
+  renderGrid();
+  document.getElementById('jornadaModal').classList.remove('open');
+  showToast(count === 1 ? 'Jornada configurada: 1 módulo' : `Jornada configurada: ${count} módulos`);
+}
+
+function countFor(key){
+  const m = data.marks[key] || {};
+  return Object.values(m).filter(Boolean).length;
+}
+
+// ==== Comparación con AcopioArato (Google Sheets) ====
+const ACOPIO_SHEET_ID = '1S8Z_lDaMfg0TxYKH1_0rrTCL3H7FI0DUb5PPfgSwYp4';
+const ACOPIO_SHEET_GID = '1962582873'; // pestaña AcopioArato
+
+// Guarda el último comparativo obtenido para poder incluirlo en la imagen que se comparte,
+// sin tener que volver a consultar Google Sheets si ya se acaba de comparar para la misma fecha.
+let lastExternalCounts = null;
+let lastExternalCountsFecha = null;
+
+function normalizeSubgrupo(raw){
+  if(!raw) return null;
+  const m = String(raw).trim().toUpperCase().match(/^([A-Z])(\d+)$/);
+  if(!m) return null;
+  return m[1] + m[2].padStart(3,'0');
+}
+
+function fechaSheetToISO(raw){
+  // Convierte "D/M/YYYY" o "DD/MM/YYYY" a "YYYY-MM-DD"
+  if(!raw) return null;
+  const parts = String(raw).trim().split('/');
+  if(parts.length !== 3) return null;
+  const [d, mo, y] = parts;
+  if(!d || !mo || !y) return null;
+  return `${y.padStart(4,'0')}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+
+function fetchAcopioData(){
+  return new Promise((resolve, reject) => {
+    const callbackName = 'gvizCb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    const timeoutId = setTimeout(() => {
+      cleanup();
+      reject(new Error('Se agotó el tiempo de espera al conectar con Google Sheets. Verifica tu conexión a internet.'));
+    }, 15000);
+
+    function cleanup(){
+      clearTimeout(timeoutId);
+      delete window[callbackName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[callbackName] = (response) => {
+      cleanup();
+      try{
+        if(!response || response.status === 'error'){
+          const msg = (response && response.errors && response.errors[0] && response.errors[0].detailed_message) || 'La hoja no está disponible o no es pública.';
+          reject(new Error(msg));
+          return;
+        }
+        resolve(response.table);
+      } catch(e){
+        reject(e);
+      }
+    };
+
+    const script = document.createElement('script');
+    script.src = `https://docs.google.com/spreadsheets/d/${ACOPIO_SHEET_ID}/gviz/tq?gid=${ACOPIO_SHEET_GID}&tqx=out:json;responseHandler:${callbackName}`;
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('No se pudo conectar con Google Sheets. Revisa tu conexión a internet o que el enlace siga compartido como "Cualquiera con el enlace puede ver".'));
+    };
+    document.body.appendChild(script);
+  });
+}
+
+// Consulta la hoja y devuelve { 'A001': cantidadEsperada, ... } para la fecha indicada.
+// Lanza un error si no se puede leer la hoja o falta la columna SUBGRUPO.
+async function getExternalCountsForDate(targetISO){
+  if(!targetISO){
+    throw new Error('No hay una fecha seleccionada. Elige la fecha antes de comparar.');
+  }
+  const table = await fetchAcopioData();
+  const cols = table.cols || [];
+  const findCol = (labelMatch) => cols.findIndex(c => c && c.label && labelMatch.test(c.label.trim().toUpperCase()));
+  const idxSubgrupo = findCol(/^SUBGRUPO$/);
+  const idxFecha = findCol(/^FECHA$/);
+  const idxCantidad = findCol(/^CANTIDAD$/);
+
+  if(idxSubgrupo === -1){
+    throw new Error('No se encontró la columna "SUBGRUPO" en la pestaña AcopioArato.');
+  }
+
+  const externalCounts = {};
+  (table.rows || []).forEach(row => {
+    const c = row.c || [];
+    const rawSub = c[idxSubgrupo] ? c[idxSubgrupo].v : null;
+    const key = normalizeSubgrupo(rawSub);
+    if(!key) return;
+
+    if(idxFecha !== -1 && targetISO){
+      const rawFecha = c[idxFecha] ? (c[idxFecha].f || c[idxFecha].v) : null;
+      const iso = fechaSheetToISO(rawFecha);
+      if(iso && iso !== targetISO) return; // solo contar filas de la fecha de hoy
+    }
+
+    let cantidad = 1;
+    if(idxCantidad !== -1 && c[idxCantidad] && typeof c[idxCantidad].v === 'number'){
+      cantidad = c[idxCantidad].v;
+    }
+    externalCounts[key] = (externalCounts[key] || 0) + cantidad;
+  });
+
+  return externalCounts;
+}
+
+async function runComparison(){
+  const loading = document.getElementById('compareLoading');
+  const body = document.getElementById('compareBody');
+  const retryBtn = document.getElementById('compareRetryBtn');
+  data.fecha = normalizeFechaISO(data.fecha);
+  document.getElementById('compareFechaLabel').textContent = data.fecha || '—';
+  body.innerHTML = '<div id="compareLoading" style="padding:20px 0; text-align:center; color:var(--ink-soft);">Conectando con Google Sheets…</div>';
+  retryBtn.style.display = 'none';
+
+  const targetISO = data.fecha;
+  let externalCounts;
+  try{
+    externalCounts = await getExternalCountsForDate(targetISO);
+  } catch(e){
+    body.innerHTML = `<div style="padding:14px; background:#FBE9E7; border:1px solid #E0A899; border-radius:8px; color:#7A2E1E;">
+      No se pudo completar la comparación: ${e.message}
+    </div>`;
+    retryBtn.style.display = '';
+    return;
+  }
+
+  // Se guarda en caché para que, al compartir la imagen, no haya que volver a consultar la hoja.
+  lastExternalCounts = externalCounts;
+  lastExternalCountsFecha = targetISO;
+
+  // Contar lo que tenemos registrado localmente por subgrupo
+  const localCounts = {};
+  GROUPS.forEach(g => SUBS.forEach(s => {
+    const key = subKey(g,s);
+    const m = data.marks[key] || {};
+    localCounts[key] = Object.values(m).filter(Boolean).length;
+  }));
+
+  const allKeys = Array.from(new Set([...Object.keys(externalCounts), ...Object.keys(localCounts)])).sort();
+
+  const rowsHtml = [];
+  let totalFaltantes = 0;
+  let totalExceso = 0;
+
+  allKeys.forEach(key => {
+    const ext = Math.round(externalCounts[key] || 0);
+    const loc = localCounts[key] || 0;
+    // Solo mostrar subgrupos con los que se está trabajando (con al menos 1 bin registrado localmente)
+    if(loc === 0) return;
+
+    if(loc < ext){
+      const missing = [];
+      for(let i=1; i<=ext; i++){
+        const m = data.marks[key] || {};
+        if(!m[i]) missing.push(i);
+      }
+      totalFaltantes += (ext - loc);
+      rowsHtml.push(`<div style="padding:8px 10px; border-radius:6px; background:#FFF3E0; border:1px solid #F0C089; margin-bottom:6px;">
+        <b>${key}</b>: tienes ${loc} de ${ext} bines. Faltan correlativos: <b>${missing.join(', ')}</b>
+      </div>`);
+    } else if(loc > ext){
+      totalExceso += (loc - ext);
+      rowsHtml.push(`<div style="padding:8px 10px; border-radius:6px; background:#EAF3E7; border:1px solid #B9D4AE; margin-bottom:6px;">
+        <b>${key}</b>: tienes ${loc} registrados, la hoja muestra ${ext}. Revisa si hay bines de más o duplicados.
+      </div>`);
+    } else {
+      rowsHtml.push(`<div style="padding:8px 10px; border-radius:6px; background:#F1F1EA; margin-bottom:6px;">
+        <b>${key}</b>: ${loc} de ${ext} — completo ✓
+      </div>`);
+    }
+  });
+
+  if(allKeys.length === 0 || (externalCounts && Object.keys(externalCounts).length === 0)){
+    body.innerHTML = `<div style="padding:14px; background:#FFF3E0; border:1px solid #F0C089; border-radius:8px;">
+      No se encontraron filas en AcopioArato para la fecha ${targetISO}. Verifica que la fecha seleccionada en la hoja coincida con los registros del Google Sheets.
+    </div>`;
+    return;
+  }
+
+  const summary = totalFaltantes > 0
+    ? `<div style="padding:10px; margin-bottom:10px; background:#FBE9E7; border:1px solid #E0A899; border-radius:8px; font-weight:700; color:#7A2E1E;">Faltan ${totalFaltantes} bines por registrar en total.</div>`
+    : `<div style="padding:10px; margin-bottom:10px; background:#EAF3E7; border:1px solid #B9D4AE; border-radius:8px; font-weight:700; color:#355E33;">¡Todo cuadra! No falta ningún bin por registrar.</div>`;
+
+  body.innerHTML = summary + rowsHtml.join('');
+
+  if(totalFaltantes > 0){
+    showToast(`Comparación lista: faltan ${totalFaltantes} bines por registrar`, true);
+  } else {
+    showToast('Comparación lista: todo cuadra');
+  }
+}
+
+function openCompareModal(){
+  document.getElementById('compareModal').classList.add('open');
+  runComparison();
+}
+
+function closeCompareModal(){
+  document.getElementById('compareModal').classList.remove('open');
+}
+
+// ============================================================================
+// Comparación "Campo vs Acopio" por módulos: a diferencia de la comparación por
+// subgrupo de arriba, aquí el lado de "campo" se agrupa por MÓDULO (ya que la
+// hoja de AcopioArato no distingue módulos, solo subgrupos), y el lado de
+// "acopio" es un único total para la fecha (suma de todos los subgrupos).
+// ============================================================================
+
+// Calcula ambos lados de la comparación. Se separa del render para poder
+// reutilizar exactamente el mismo cálculo tanto en el modal como en la imagen
+// que se comparte, sin duplicar lógica ni volver a consultar la hoja dos veces.
+async function computeCampoAcopioComparison(){
+  const targetISO = normalizeFechaISO(data.fecha);
+  if(!targetISO){
+    throw new Error('No hay una fecha seleccionada. Elige la fecha antes de comparar.');
+  }
+
+  // Reutiliza el comparativo ya cacheado (de la comparación por subgrupo) si es
+  // de la misma fecha, para no golpear la hoja de Google Sheets dos veces.
+  let externalCounts;
+  if(lastExternalCounts && lastExternalCountsFecha === targetISO){
+    externalCounts = lastExternalCounts;
+  } else {
+    externalCounts = await getExternalCountsForDate(targetISO);
+    lastExternalCounts = externalCounts;
+    lastExternalCountsFecha = targetISO;
+  }
+
+  const acopioTotal = Object.values(externalCounts || {}).reduce((a,b) => a + Math.round(b || 0), 0);
+
+  // Cuenta lo registrado en campo, agrupado por módulo. Se recorre TODO
+  // data.marks (todos los subgrupos), no solo los grupos "activos" en pantalla.
+  const modules = (data.modules && data.modules.length) ? data.modules : defaultModules();
+  const moduleTotals = {};
+  modules.forEach(m => moduleTotals[m.id] = 0);
+  let otros = 0; // bines con un moduleId que ya no corresponde a ningún módulo configurado hoy
+  let campoTotal = 0;
+  Object.keys(data.marks || {}).forEach(key => {
+    const m = data.marks[key] || {};
+    Object.values(m).forEach(moduleId => {
+      if(!moduleId) return;
+      campoTotal++;
+      if(moduleTotals[moduleId] !== undefined) moduleTotals[moduleId]++;
+      else otros++;
+    });
+  });
+
+  return { targetISO, modules, moduleTotals, otros, campoTotal, acopioTotal };
+}
+
+async function runCampoAcopioComparison(){
+  const loading = document.getElementById('campoAcopioLoading');
+  const body = document.getElementById('campoAcopioBody');
+  const retryBtn = document.getElementById('campoAcopioRetryBtn');
+  document.getElementById('campoAcopioFechaLabel').textContent = normalizeFechaISO(data.fecha) || '—';
+  body.innerHTML = '<div id="campoAcopioLoading" style="padding:20px 0; text-align:center; color:var(--ink-soft);">Conectando con Google Sheets…</div>';
+  retryBtn.style.display = 'none';
+
+  let result;
+  try{
+    result = await computeCampoAcopioComparison();
+  } catch(e){
+    body.innerHTML = `<div style="padding:14px; background:#FBE9E7; border:1px solid #E0A899; border-radius:8px; color:#7A2E1E;">
+      No se pudo completar la comparación: ${e.message}
+    </div>`;
+    retryBtn.style.display = '';
+    return;
+  }
+
+  body.innerHTML = renderCampoAcopioHtml(result);
+
+  const diff = result.acopioTotal - result.campoTotal;
+  if(diff > 0){
+    showToast(`Falta${diff === 1 ? '' : 'n'} ${diff} bin${diff === 1 ? '' : 'es'} por registrar en campo`, true);
+  } else if(diff < 0){
+    showToast(`Tienes ${Math.abs(diff)} bin(es) de más en campo respecto a Acopio`, true);
+  } else {
+    showToast('Comparación lista: todo cuadra');
+  }
+}
+
+// Genera el HTML que se ve tanto en el modal como (con estilos propios) en la imagen.
+function renderCampoAcopioHtml(result){
+  const { modules, moduleTotals, otros, campoTotal, acopioTotal } = result;
+  const diff = acopioTotal - campoTotal;
+
+  const moduleRows = modules.map(m => `
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #E5E0CC;">
+      <span>${m.symbol} ${m.name}</span><b>${moduleTotals[m.id] || 0}</b>
+    </div>`).join('');
+  const otrosRow = otros > 0 ? `
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #E5E0CC; color:var(--ink-soft);">
+      <span>Otros (módulo reasignado)</span><b>${otros}</b>
+    </div>` : '';
+
+  const warningHtml = diff > 0
+    ? `<div style="padding:10px; margin-top:12px; background:#FBE9E7; border:1px solid #E0A899; border-radius:8px; font-weight:700; color:#7A2E1E;">⚠ Bin faltante: ${diff}</div>`
+    : diff < 0
+      ? `<div style="padding:10px; margin-top:12px; background:#FFF3E0; border:1px solid #F0C089; border-radius:8px; font-weight:700; color:#7A4B1E;">Tienes ${Math.abs(diff)} bin(es) de más en campo respecto a Acopio.</div>`
+      : `<div style="padding:10px; margin-top:12px; background:#EAF3E7; border:1px solid #B9D4AE; border-radius:8px; font-weight:700; color:#355E33;">✓ Todo cuadra, sin diferencias.</div>`;
+
+  return `
+    <div style="display:flex; gap:14px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:170px; background:#FFFDF8; border:1px solid #DCD4BC; border-radius:10px; padding:12px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#9C6A1E; margin-bottom:6px;">Bines ingresados en campo</div>
+        <div style="font-size:32px; font-weight:700; color:#1F2A1A; margin-bottom:8px;">${campoTotal}</div>
+        ${moduleRows}${otrosRow}
+      </div>
+      <div style="flex:1; min-width:170px; background:#FFFDF8; border:1px solid #DCD4BC; border-radius:10px; padding:12px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#9C6A1E; margin-bottom:6px;">Bines registrados en Acopio</div>
+        <div style="font-size:32px; font-weight:700; color:#1F2A1A;">${acopioTotal}</div>
+      </div>
+    </div>
+    ${warningHtml}
+  `;
+}
+
+function openCampoAcopioModal(){
+  document.getElementById('campoAcopioModal').classList.add('open');
+  runCampoAcopioComparison();
+}
+
+function closeCampoAcopioModal(){
+  document.getElementById('campoAcopioModal').classList.remove('open');
+}
+
+// Construye el contenedor fuera de pantalla que se convierte en imagen para
+// compartir por WhatsApp, con el título "Comparación de Bines Campo vs Acopio".
+function buildCampoAcopioExportContainer(result){
+  const { modules, moduleTotals, otros, campoTotal, acopioTotal } = result;
+  const diff = acopioTotal - campoTotal;
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed; left:-99999px; top:0; background:#F3EFE1; padding:24px; font-family:"IBM Plex Sans",sans-serif; width:520px;';
+
+  const moduleRowsHtml = modules.map(m => `
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #E5E0CC; font-family:'IBM Plex Mono',monospace; font-size:13px;">
+      <span>${m.symbol} ${m.name}</span><b>${moduleTotals[m.id] || 0}</b>
+    </div>`).join('');
+  const otrosRowHtml = otros > 0 ? `
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #E5E0CC; font-family:'IBM Plex Mono',monospace; font-size:13px; color:#7A7360;">
+      <span>Otros</span><b>${otros}</b>
+    </div>` : '';
+
+  const warningHtml = diff > 0
+    ? `<div style="margin-top:16px; padding:12px 14px; background:#FBE9E7; border:1px solid #E0A899; border-radius:10px; font-weight:700; color:#7A2E1E; font-family:'IBM Plex Sans',sans-serif;">⚠ Bin faltante: ${diff}</div>`
+    : diff < 0
+      ? `<div style="margin-top:16px; padding:12px 14px; background:#FFF3E0; border:1px solid #F0C089; border-radius:10px; font-weight:700; color:#7A4B1E; font-family:'IBM Plex Sans',sans-serif;">${Math.abs(diff)} bin(es) de más en campo respecto a Acopio</div>`
+      : `<div style="margin-top:16px; padding:12px 14px; background:#EAF3E7; border:1px solid #B9D4AE; border-radius:10px; font-weight:700; color:#355E33; font-family:'IBM Plex Sans',sans-serif;">✓ Todo cuadra, sin diferencias</div>`;
+
+  wrap.innerHTML = `
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#9C6A1E;">Acopio · Recepción de cosecha</div>
+    <div style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:#1F2A1A; margin-bottom:2px;">Comparación de Bines Campo vs Acopio</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#3A4A32; margin-bottom:16px;">Fecha: ${normalizeFechaISO(data.fecha) || '—'}</div>
+    <div style="display:flex; gap:16px;">
+      <div style="flex:1; background:#FFFDF8; border:1px solid #DCD4BC; border-radius:12px; padding:16px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#9C6A1E; margin-bottom:8px;">Bines ingresados en campo</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; color:#1F2A1A; margin-bottom:10px;">${campoTotal}</div>
+        ${moduleRowsHtml}${otrosRowHtml}
+      </div>
+      <div style="flex:1; background:#FFFDF8; border:1px solid #DCD4BC; border-radius:12px; padding:16px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#9C6A1E; margin-bottom:8px;">Bines registrados en Acopio</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; color:#1F2A1A;">${acopioTotal}</div>
+      </div>
+    </div>
+    ${warningHtml}
+  `;
+  document.body.appendChild(wrap);
+  return wrap;
+}
+
+async function shareCampoAcopioImage(){
+  const shareBtn = document.getElementById('campoAcopioShareBtn');
+  const originalText = shareBtn.textContent;
+  shareBtn.textContent = 'Generando…';
+  shareBtn.disabled = true;
+
+  let exportEl = null;
+  try{
+    const result = await computeCampoAcopioComparison();
+    exportEl = buildCampoAcopioExportContainer(result);
+    const canvas = await Promise.race([
+      html2canvas(exportEl, { backgroundColor: '#F3EFE1', scale: 2, useCORS: true, allowTaint: false, logging: false }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000))
+    ]);
+    canvas.toBlob(async (blob) => {
+      if(!blob){
+        showToast('No se pudo generar la imagen. Inténtalo de nuevo.', true);
+        shareBtn.textContent = originalText;
+        shareBtn.disabled = false;
+        if(exportEl.parentNode) document.body.removeChild(exportEl);
+        return;
+      }
+      const fileName = `campo-vs-acopio-${normalizeFechaISO(data.fecha) || 'hoy'}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+      let handled = false;
+
+      if(navigator.canShare && navigator.canShare({ files: [file] })){
+        try{
+          await navigator.share({
+            files: [file],
+            title: 'Comparación de Bines Campo vs Acopio',
+            text: `Campo vs Acopio - ${normalizeFechaISO(data.fecha)}`
+          });
+          showToast('Compartido correctamente');
+          handled = true;
+        } catch(err){
+          if(err && err.name === 'AbortError'){
+            showToast('Envío cancelado');
+            handled = true;
+          }
+        }
+      }
+
+      if(!handled){
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Imagen descargada. Ábrela y compártela por WhatsApp.');
+      }
+
+      shareBtn.textContent = originalText;
+      shareBtn.disabled = false;
+      if(exportEl.parentNode) document.body.removeChild(exportEl);
+    }, 'image/png');
+  } catch(e){
+    console.error(e);
+    const msg = e && e.message === 'timeout'
+      ? 'La imagen está tardando demasiado. Verifica tu conexión e inténtalo de nuevo.'
+      : (e && e.message) ? e.message : 'Error al generar la imagen';
+    showToast(msg, true);
+    shareBtn.textContent = originalText;
+    shareBtn.disabled = false;
+    if(exportEl && exportEl.parentNode) document.body.removeChild(exportEl);
+  }
+}
+
+function openShareModal(){
+  const list = document.getElementById('modalList');
+  list.innerHTML = '';
+  GROUPS.forEach(g => {
+    const block = document.createElement('div');
+    block.className = 'group-block';
+
+    const title = document.createElement('label');
+    title.className = 'group-block-title';
+    const groupCb = document.createElement('input');
+    groupCb.type = 'checkbox';
+    groupCb.dataset.groupToggle = g;
+    title.appendChild(groupCb);
+    title.appendChild(document.createTextNode('Grupo ' + g));
+    block.appendChild(title);
+
+    const subsWrap = document.createElement('div');
+    subsWrap.className = 'sub-checks';
+    SUBS.forEach(s => {
+      const key = subKey(g,s);
+      const cnt = countFor(key);
+      const lbl = document.createElement('label');
+      lbl.className = 'sub-check';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = key;
+      cb.checked = cnt > 0;
+      cb.dataset.sub = key;
+      lbl.appendChild(cb);
+      lbl.appendChild(document.createTextNode(key));
+      if(cnt > 0){
+        const badge = document.createElement('span');
+        badge.className = 'badge-count';
+        badge.textContent = cnt;
+        lbl.appendChild(badge);
+      }
+      subsWrap.appendChild(lbl);
+    });
+    block.appendChild(subsWrap);
+    list.appendChild(block);
+
+    const syncGroupCb = () => {
+      const subCbs = [...subsWrap.querySelectorAll('input[data-sub]')];
+      const checkedCount = subCbs.filter(c => c.checked).length;
+      groupCb.checked = checkedCount === subCbs.length;
+      groupCb.indeterminate = checkedCount > 0 && checkedCount < subCbs.length;
+    };
+    syncGroupCb();
+    subsWrap.querySelectorAll('input[data-sub]').forEach(cb => {
+      cb.addEventListener('change', syncGroupCb);
+    });
+    groupCb.addEventListener('change', () => {
+      subsWrap.querySelectorAll('input[data-sub]').forEach(cb => { cb.checked = groupCb.checked; });
+      groupCb.indeterminate = false;
+    });
+  });
+  document.getElementById('shareModal').classList.add('open');
+}
+
+function closeShareModal(){
+  document.getElementById('shareModal').classList.remove('open');
+}
+
+function setAllChecks(value){
+  document.querySelectorAll('#modalList input[data-sub]').forEach(cb => cb.checked = value);
+  document.querySelectorAll('#modalList input[data-group-toggle]').forEach(cb => { cb.checked = value; cb.indeterminate = false; });
+}
+
+function selectWorkedOnly(){
+  document.querySelectorAll('#modalList input[data-sub]').forEach(cb => {
+    cb.checked = countFor(cb.dataset.sub) > 0;
+  });
+  document.querySelectorAll('#modalList .group-block').forEach(block => {
+    const subCbs = [...block.querySelectorAll('input[data-sub]')];
+    const groupCb = block.querySelector('input[data-group-toggle]');
+    const checkedCount = subCbs.filter(c => c.checked).length;
+    groupCb.checked = checkedCount === subCbs.length;
+    groupCb.indeterminate = checkedCount > 0 && checkedCount < subCbs.length;
+  });
+}
+
+function getSelectedKeys(){
+  return [...document.querySelectorAll('#modalList input[data-sub]:checked')].map(cb => cb.value);
+}
+
+function getUsedColumnRange(keys){
+  let lo = maxCol + 1, hi = 0;
+  keys.forEach(k => {
+    const m = data.marks[k] || {};
+    Object.keys(m).forEach(c => {
+      const n = parseInt(c, 10);
+      if(n < lo) lo = n;
+      if(n > hi) hi = n;
+    });
+  });
+  if(hi < lo) return { from: 1, to: maxCol };
+  return { from: lo, to: hi };
+}
+
+function buildExportContainer(selectedKeys, externalCounts){
+  const range = getUsedColumnRange(selectedKeys);
+  const modules = data.modules && data.modules.length ? data.modules : defaultModules();
+  const hasComparison = !!externalCounts;
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed; left:-99999px; top:0; background:#F3EFE1; padding:20px; font-family:"IBM Plex Sans",sans-serif; width:max-content;';
+
+  const head = document.createElement('div');
+  head.style.cssText = 'margin-bottom:14px;';
+  const legendHtml = modules.length > 1
+    ? `<div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">${modules.map(m => `<span style="display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px; background:${m.bg}; color:${m.color}; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;">${m.symbol} ${m.name}</span>`).join('')}</div>`
+    : '';
+  head.innerHTML = `
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#9C6A1E;">Acopio · Recepción de cosecha</div>
+    <div style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:#1F2A1A;">Control de Bines por Correlativo</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#3A4A32; margin-top:4px;">Fecha: ${data.fecha || '—'}</div>
+    ${legendHtml}
+  `;
+  wrap.appendChild(head);
+
+  const table = document.createElement('table');
+  table.style.cssText = 'border-collapse:collapse; font-family:"IBM Plex Mono",monospace; font-size:12px;';
+
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  const corner = document.createElement('th');
+  corner.textContent = 'Subgrupo';
+  corner.style.cssText = 'background:#1F2A1A; color:#FFFDF8; padding:6px 10px; border:1px solid #DCD4BC; text-align:left;';
+  trh.appendChild(corner);
+  for(let i = range.from; i <= range.to; i++){
+    const th = document.createElement('th');
+    th.textContent = i;
+    th.style.cssText = 'background:#1F2A1A; color:#FFFDF8; padding:6px 4px; border:1px solid #DCD4BC; min-width:26px;';
+    trh.appendChild(th);
+  }
+  const thTotal = document.createElement('th');
+  thTotal.textContent = 'Total';
+  thTotal.style.cssText = 'background:#1F2A1A; color:#FFFDF8; padding:6px 8px; border:1px solid #DCD4BC;';
+  trh.appendChild(thTotal);
+  if(hasComparison){
+    const thFaltan = document.createElement('th');
+    thFaltan.textContent = 'Faltan';
+    thFaltan.style.cssText = 'background:#7A2E1E; color:#FFFDF8; padding:6px 8px; border:1px solid #DCD4BC;';
+    trh.appendChild(thFaltan);
+  }
+  thead.appendChild(trh);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  let grand = 0;
+  let grandFaltan = 0;
+  const moduleTotals = {};
+  modules.forEach(m => moduleTotals[m.id] = 0);
+  GROUPS.forEach(g => {
+    const groupKeys = SUBS.map(s => subKey(g,s)).filter(k => selectedKeys.includes(k));
+    if(groupKeys.length === 0) return;
+
+    const trCorr = document.createElement('tr');
+    const thGroup = document.createElement('th');
+    thGroup.textContent = 'Grupo ' + g;
+    thGroup.style.cssText = 'background:#C98A2B; color:#FFFDF8; padding:5px 10px; border:1px solid #DCD4BC; text-align:left; white-space:nowrap;';
+    trCorr.appendChild(thGroup);
+    for(let i = range.from; i <= range.to; i++){
+      const tdCorr = document.createElement('td');
+      tdCorr.textContent = i;
+      tdCorr.style.cssText = 'background:#C98A2B; color:#FFFDF8; padding:4px; border:1px solid #DCD4BC; text-align:center; font-weight:700;';
+      trCorr.appendChild(tdCorr);
+    }
+    const tdCorrTotal = document.createElement('td');
+    tdCorrTotal.style.cssText = 'background:#C98A2B; border:1px solid #DCD4BC;';
+    trCorr.appendChild(tdCorrTotal);
+    if(hasComparison){
+      const tdCorrFaltan = document.createElement('td');
+      tdCorrFaltan.style.cssText = 'background:#C98A2B; border:1px solid #DCD4BC;';
+      trCorr.appendChild(tdCorrFaltan);
+    }
+    tbody.appendChild(trCorr);
+
+    groupKeys.forEach((key, idx) => {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.textContent = key;
+      th.style.cssText = `background:#FFFDF8; padding:5px 10px; border:1px solid #DCD4BC; border-right:2px solid #C98A2B; text-align:left; ${idx===0?'border-top:2.5px solid #1F2A1A;':''}`;
+      tr.appendChild(th);
+      let total = 0;
+      for(let i = range.from; i <= range.to; i++){
+        const td = document.createElement('td');
+        const moduleId = data.marks[key] && data.marks[key][i];
+        const style = moduleId ? moduleStyleFor(moduleId) : null;
+        if(moduleId){
+          total++;
+          if(moduleTotals[moduleId] !== undefined) moduleTotals[moduleId]++;
+        }
+        td.style.cssText = `width:26px; height:26px; text-align:center; border:1px solid #DCD4BC; background:${style ? style.bg : '#FFFFFF'}; ${idx===0?'border-top:2.5px solid #1F2A1A;':''}`;
+        td.innerHTML = style ? `<span style="color:${style.color}; font-weight:700; display:inline-block;">${style.symbol}</span>` : '';
+        tr.appendChild(td);
+      }
+      const tdTotal = document.createElement('td');
+      tdTotal.textContent = total;
+      tdTotal.style.cssText = `text-align:center; border:1px solid #DCD4BC; padding:0 8px; color:#3A4A32; ${idx===0?'border-top:2.5px solid #1F2A1A;':''}`;
+      tr.appendChild(tdTotal);
+      grand += total;
+
+      if(hasComparison){
+        const expected = Math.round(externalCounts[key] || 0);
+        const faltan = Math.max(0, expected - total);
+        grandFaltan += faltan;
+        const tdFaltan = document.createElement('td');
+        tdFaltan.textContent = expected > 0 ? faltan : '—';
+        tdFaltan.style.cssText = `text-align:center; border:1px solid #DCD4BC; padding:0 8px; font-weight:700; color:${faltan > 0 ? '#7A2E1E' : '#355E33'}; background:${faltan > 0 ? '#FBE9E7' : '#EAF3E7'}; ${idx===0?'border-top:2.5px solid #1F2A1A;':''}`;
+        tr.appendChild(tdFaltan);
+      }
+
+      tbody.appendChild(tr);
+    });
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+
+  const foot = document.createElement('div');
+  foot.style.cssText = 'margin-top:12px; font-family:"IBM Plex Mono",monospace; font-size:12px; color:#3A4A32; display:flex; gap:16px; flex-wrap:wrap;';
+  let footHtml = `<span>Total de bines en esta imagen: <b>${grand}</b></span>`;
+  if(modules.length > 1){
+    footHtml += modules.map(m => `<span>${m.symbol} ${m.name}: <b>${moduleTotals[m.id] || 0}</b></span>`).join('');
+  }
+  if(hasComparison){
+    footHtml += grandFaltan > 0
+      ? `<span style="color:#7A2E1E; font-weight:700;">Faltan por sacar de campo / ingresar: <b>${grandFaltan}</b></span>`
+      : `<span style="color:#355E33; font-weight:700;">Todo cuadra con AcopioArato ✓</span>`;
+  }
+  foot.innerHTML = footHtml;
+  wrap.appendChild(foot);
+
+  document.body.appendChild(wrap);
+  return wrap;
+}
+
+async function generateAndShare(){
+  const selectedKeys = getSelectedKeys();
+  if(selectedKeys.length === 0){
+    showToast('Selecciona al menos un subgrupo', true);
+    return;
+  }
+  const confirmBtn = document.getElementById('modalConfirmBtn');
+  const originalText = confirmBtn.textContent;
+  confirmBtn.textContent = 'Generando…';
+  confirmBtn.disabled = true;
+
+  // Si ya tenemos un comparativo reciente (de la misma fecha) lo reutilizamos; si no,
+  // intentamos traerlo ahora para poder incluir la columna "Faltan". Si falla (sin
+  // internet, hoja no disponible, etc.) seguimos igual, solo que sin esa columna.
+  let externalCounts = null;
+  if(lastExternalCounts && lastExternalCountsFecha === data.fecha){
+    externalCounts = lastExternalCounts;
+  } else {
+    confirmBtn.textContent = 'Calculando faltantes…';
+    try{
+      externalCounts = await getExternalCountsForDate(data.fecha);
+      lastExternalCounts = externalCounts;
+      lastExternalCountsFecha = data.fecha;
+    } catch(e){
+      console.warn('No se pudo obtener el comparativo de AcopioArato para la imagen:', e);
+      externalCounts = null;
+    }
+    confirmBtn.textContent = 'Generando…';
+  }
+
+  const exportEl = buildExportContainer(selectedKeys, externalCounts);
+  try{
+    const canvas = await Promise.race([
+      html2canvas(exportEl, { backgroundColor: '#F3EFE1', scale: 2, useCORS: true, allowTaint: false, logging: false }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000))
+    ]);
+    canvas.toBlob(async (blob) => {
+      if(!blob){
+        showToast('No se pudo generar la imagen. Inténtalo de nuevo.', true);
+        confirmBtn.textContent = originalText;
+        confirmBtn.disabled = false;
+        if(exportEl.parentNode) document.body.removeChild(exportEl);
+        return;
+      }
+      const fileName = `control-bines-${data.fecha || 'hoy'}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+      let handled = false;
+
+      if(navigator.canShare && navigator.canShare({ files: [file] })){
+        try{
+          await navigator.share({
+            files: [file],
+            title: 'Control de Bines por Correlativo',
+            text: `Control de bines - ${data.fecha}`
+          });
+          showToast('Compartido correctamente');
+          handled = true;
+        } catch(err){
+          if(err && err.name === 'AbortError'){
+            showToast('Envío cancelado');
+            handled = true;
+          }
+          // Cualquier otro error (por ejemplo, el permiso de compartir caducó mientras
+          // se generaba la imagen) cae al respaldo de descarga de abajo, para que el
+          // usuario siempre termine con la imagen en su dispositivo.
+        }
+      }
+
+      if(!handled){
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Imagen descargada. Ábrela y compártela por WhatsApp.');
+      }
+
+      confirmBtn.textContent = originalText;
+      confirmBtn.disabled = false;
+      document.body.removeChild(exportEl);
+      closeShareModal();
+    }, 'image/png');
+  } catch(e){
+    console.error(e);
+    const msg = e && e.message === 'timeout'
+      ? 'La imagen está tardando demasiado. Verifica tu conexión e inténtalo de nuevo.'
+      : 'Error al generar la imagen';
+    showToast(msg, true);
+    confirmBtn.textContent = originalText;
+    confirmBtn.disabled = false;
+    if(exportEl && exportEl.parentNode) document.body.removeChild(exportEl);
+  }
+}
+
+// Cambia la tabla a otra fecha: guarda lo que hubiera pendiente de la fecha actual
+// y carga (o abre vacía, si nunca se llenó) la fecha elegida. Cada fecha queda
+// guardada en su propio cajón, así que no se pierde ni se mezcla nada entre días.
+async function switchToFecha(newFecha){
+  if(!newFecha || newFecha === data.fecha) return;
+  // Aseguramos que el registro más reciente de la fecha que dejamos quede guardado
+  // antes de cambiar de cajón.
+  await flushLocalSave();
+  undoStack = [];
+  await loadData(newFecha);
+  data.fecha = normalizeFechaISO(data.fecha) || newFecha;
+  document.getElementById('fecha').value = data.fecha;
+  document.getElementById('maxcol').value = maxCol;
+  populateCorrelativoSelect();
+  populateModuleSelect();
+  renderGrid();
+  markLocalChange();
+  queueSave();
+  if(!data.modules || data.modules.length === 0 || data.modulesDate !== data.fecha){
+    openJornadaModal();
+  } else {
+    showToast('Mostrando registros del ' + data.fecha);
+  }
+}
+
+async function init(){
+  const todayISO = new Date().toISOString().slice(0,10);
+  await loadData(todayISO);
+  data.fecha = normalizeFechaISO(data.fecha) || todayISO;
+  document.getElementById('fecha').value = data.fecha;
+  document.getElementById('maxcol').value = maxCol;
+
+  populateSubgrupoSelect();
+  populateCorrelativoSelect();
+  populateModuleSelect();
+  renderGrid();
+
+  document.getElementById('fecha').addEventListener('change', async (e) => {
+    const newFecha = normalizeFechaISO(e.target.value);
+    await switchToFecha(newFecha);
+  });
+  document.getElementById('registrarBtn').addEventListener('click', async (e) => {
+    // Protección anti doble-tap: en pantallas táctiles, un toque rápido a veces
+    // dispara el evento "click" dos veces seguidas para el mismo bin. Deshabilitar
+    // brevemente el botón evita registrar (o intentar registrar) el mismo bin dos
+    // veces en cuestión de milisegundos.
+    const btn = e.currentTarget;
+    if(btn.disabled) return;
+    btn.disabled = true;
+    try{
+      await registrar();
+    } finally {
+      setTimeout(() => { btn.disabled = false; }, 220);
+    }
+  });
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('clearBtn').addEventListener('click', clearAll);
+  // Salvaguarda para uso en campo: si el celular manda la app a segundo plano
+  // (llamada entrante, cambio de app, bloqueo de pantalla) justo cuando había un
+  // guardado en curso, intentamos asegurar el guardado local de inmediato y
+  // reactivamos el envío a Sheets en cuanto vuelva a primer plano.
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'hidden'){
+      flushLocalSave();
+    } else if(document.visibilityState === 'visible'){
+      scheduleRemotePush();
+    }
+  });
+  // Si por alguna razón queda un guardado en curso justo al intentar cerrar la
+  // pestaña/navegador, se muestra la advertencia nativa para dar tiempo a que
+  // termine (evita perder el último bin registrado por cerrar demasiado rápido).
+  window.addEventListener('beforeunload', (e) => {
+    if(localSaveInProgress || localSavePending || remotePushInProgress || remotePushPendingAgain){
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+  // Atajo de teclado: presionar Enter en subgrupo/correlativo/módulo registra el bin,
+  // para agilizar el ingreso cuando se usa teclado físico o teclado numérico externo.
+  ['subgrupo','correlativo','moduleSelect'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        document.getElementById('registrarBtn').click();
+      }
+    });
+  });
+  document.getElementById('maxcol').addEventListener('change', changeMaxCol);
+
+  document.getElementById('shareBtn').addEventListener('click', openShareModal);
+  document.getElementById('compareBtn').addEventListener('click', openCompareModal);
+  document.getElementById('compareCloseBtn').addEventListener('click', closeCompareModal);
+  document.getElementById('compareRetryBtn').addEventListener('click', runComparison);
+  document.getElementById('compareShareBtn').addEventListener('click', () => {
+    closeCompareModal();
+    openShareModal();
+  });
+  document.getElementById('compareModal').addEventListener('click', (e) => {
+    if(e.target.id === 'compareModal') closeCompareModal();
+  });
+  document.getElementById('compareCampoAcopioBtn').addEventListener('click', openCampoAcopioModal);
+  document.getElementById('campoAcopioCloseBtn').addEventListener('click', closeCampoAcopioModal);
+  document.getElementById('campoAcopioRetryBtn').addEventListener('click', runCampoAcopioComparison);
+  document.getElementById('campoAcopioShareBtn').addEventListener('click', shareCampoAcopioImage);
+  document.getElementById('campoAcopioModal').addEventListener('click', (e) => {
+    if(e.target.id === 'campoAcopioModal') closeCampoAcopioModal();
+  });
+  document.getElementById('selAllBtn').addEventListener('click', () => setAllChecks(true));
+  document.getElementById('selNoneBtn').addEventListener('click', () => setAllChecks(false));
+  document.getElementById('selWorkedBtn').addEventListener('click', selectWorkedOnly);
+  document.getElementById('modalCancelBtn').addEventListener('click', closeShareModal);
+  document.getElementById('modalConfirmBtn').addEventListener('click', generateAndShare);
+  document.getElementById('shareModal').addEventListener('click', (e) => {
+    if(e.target.id === 'shareModal') closeShareModal();
+  });
+
+  document.getElementById('configModulosBtn').addEventListener('click', openJornadaModal);
+  document.getElementById('jornadaConfirmBtn').addEventListener('click', saveJornada);
+  document.getElementById('numModulos').addEventListener('input', (e) => {
+    let count = parseInt(e.target.value, 10);
+    if(isNaN(count)) return;
+    if(count < 1) count = 1;
+    if(count > MODULE_STYLES.length) count = MODULE_STYLES.length;
+    const currentNames = [...document.querySelectorAll('#moduleNameFields input')].map(i => i.value);
+    renderModuleNameFields(count, currentNames);
+  });
+  document.getElementById('modulePickerCancelBtn').addEventListener('click', closeModulePicker);
+  document.getElementById('modulePickerModal').addEventListener('click', (e) => {
+    if(e.target.id === 'modulePickerModal') closeModulePicker();
+  });
+
+  // Al inicio de cada jornada (o la primera vez que se abre la hoja) se pregunta por los módulos del día
+  if(!data.modules || data.modules.length === 0 || data.modulesDate !== data.fecha){
+    openJornadaModal();
+  }
+
+  if(remoteConfigured()){
+    startSyncPolling();
+  } else {
+    console.warn('APPS_SCRIPT_URL no configurada: la app funciona solo en modo local en este dispositivo.');
+  }
+}
+
+init();
+</script>
+</body>
+</html>
